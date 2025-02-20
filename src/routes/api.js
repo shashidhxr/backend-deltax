@@ -79,6 +79,20 @@ const initApiTables = async () => {
 
 initApiTables();
 
+// apiRouter.get("/clear", async (req, res) => {
+//     try {
+//         const result = await pool.query("DROP TABLE IF EXISTS apis CASCADE;");
+
+//         res.status(200).json({
+//             message: "Database apis dropped succesfully",
+//             users: result.rows
+//         });
+//     } catch (error) {
+//         console.error("Error fetching users:", error);
+//         res.status(500).json({ error: "Internal server error" });
+//     }
+// })
+
 // Create new API endpoint
 apiRouter.post("/", authenticateToken, async (req, res) => {
     const client = await pool.connect();
@@ -227,7 +241,7 @@ apiRouter.get("/:id/analytics", authenticateToken, async (req, res) => {
     try {
         // Get traffic data
         const trafficResult = await pool.query(`
-            SELECT 
+            SELECT  
                 date_trunc('hour', timestamp) as timestamp,
                 SUM(requests) as requests
             FROM api_metrics

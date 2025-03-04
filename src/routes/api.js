@@ -17,8 +17,19 @@ const authenticateToken = (req, res, next) => {
             return res.status(403).json({ error: "Invalid token" });
         }
         req.user = user;
-        next();
     });
+    
+    jwt.sign({ userId: user.id, email: user.email }, process.env.JWT_SECRET, {
+        expiresIn: "1h",
+    })
+    
+    res.cookie("authToken", token, {
+        httpOnly: true,
+        secure: true,
+        sameSite: "strict",
+        maxAge: 3600000,
+    })
+    next();
 };
 
 const initApiTables = async () => {

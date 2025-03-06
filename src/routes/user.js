@@ -8,7 +8,7 @@ import pool from "../../config/db.js"
 const userRouter = express.Router()
 
 userRouter.use(bodyParser.json())
-userRouter.use(cors())
+// userRouter.use(cors())
 
 const initDb = async () => {
     try {
@@ -72,6 +72,19 @@ userRouter.post("/signup", async (req, res) => {
             [email, hashedPassword]
         );
 
+        const token = jwt.sign(
+            { userId: user.id, email: user.email },
+            process.env.JWT_SECRET || 'secret-key',
+            { expiresIn: '24h' }
+        );
+        
+        res.cookie("authToken", token, {
+            httpOnly: true, // Prevent client-side JavaScript from accessing the cookie
+            secure: process.env.NODE_ENV === "production", // Ensure the cookie is only sent over HTTPS in production
+            sameSite: "strict", // Prevent CSRF attacks
+            maxAge: 24 * 60 * 60 * 1000, // 24 hours in milliseconds
+        });
+        
         res.status(201).json({
             message: "User created successfully",
             user: result.rows[0]
@@ -89,30 +102,36 @@ userRouter.post("/signin", async (req, res) => {
         if (!email || !password) {
             return res.status(400).json({ error: "Email and password are required" });
         }
-
+        
         const result = await pool.query(
             "SELECT * FROM users WHERE email = $1",
             [email]
         );
-
+        
         if (result.rows.length === 0) {
             return res.status(401).json({ error: "Invalid credentials" });
         }
-
+        
         const user = result.rows[0];
-
+        
         const validPassword = await bcrypt.compare(password, user.password);
-
+        
         if (!validPassword) {
             return res.status(401).json({ error: "Invalid credentials" });
         }
-
+        
         const token = jwt.sign(
             { userId: user.id, email: user.email },
-            process.env.JWT_SECRET || 'your-secret-key',
+            process.env.JWT_SECRET || 'secret-key',
             { expiresIn: '24h' }
         );
-
+        
+        res.cookie("authToken", token, {
+            httpOnly: true, // Prevent client-side JavaScript from accessing the cookie
+            secure: process.env.NODE_ENV === "production", // Ensure the cookie is only sent over HTTPS in production
+            sameSite: "strict", // Prevent CSRF attacks
+            maxAge: 24 * 60 * 60 * 1000, // 24 hours in milliseconds
+        });
         res.json({
             message: "Logged in successfully",
             token
@@ -122,5 +141,16 @@ userRouter.post("/signin", async (req, res) => {
         res.status(500).json({ error: "Internal server error" });
     }
 });
+
+userRouter.post("/logout", (req, res) => {
+    res.clearCookie("authToken", {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict"
+    })
+    res.status(200).json({
+        message: "Logged out successfully"
+    })
+})
 
 export default userRouter;

@@ -5,30 +5,20 @@ import pool from "../../config/db.js";
 const apiRouter = express.Router();
 
 const authenticateToken = (req, res, next) => {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
+    const token = req.cookies.authToken;
+    console.log(token)
 
     if (!token) {
         return res.status(401).json({ error: "No token provided" });
     }
 
-    jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
         if (err) {
             return res.status(403).json({ error: "Invalid token" });
         }
         req.user = user;
     });
-    
-    jwt.sign({ userId: user.id, email: user.email }, process.env.JWT_SECRET, {
-        expiresIn: "1h",
-    })
-    
-    res.cookie("authToken", token, {
-        httpOnly: true,
-        secure: true,
-        sameSite: "strict",
-        maxAge: 3600000,
-    })
+        
     next();
 };
 
@@ -117,7 +107,11 @@ apiRouter.post("/", authenticateToken, async (req, res) => {
             method,
             authType,
             rateLimit,
-            loadBalancing,
+            loadBalancing = {
+                enabled: false,
+                algorithm: "",
+                targets: [],
+            },
             security
         } = req.body;
 

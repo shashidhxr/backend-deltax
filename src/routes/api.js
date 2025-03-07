@@ -6,7 +6,7 @@ const apiRouter = express.Router();
 
 const authenticateToken = (req, res, next) => {
     const token = req.cookies.authToken;
-    console.log(token)
+    // console.log(token)
 
     if (!token) {
         return res.status(401).json({ error: "No token provided" });
@@ -112,7 +112,11 @@ apiRouter.post("/", authenticateToken, async (req, res) => {
                 algorithm: "",
                 targets: [],
             },
-            security
+            security = {
+                cors: false,
+                ssl: false,
+                ipWhitelist: "",
+            }
         } = req.body;
 
         // Insert main API record
@@ -131,7 +135,7 @@ apiRouter.post("/", authenticateToken, async (req, res) => {
                 method,
                 authType,
                 rateLimit,
-                loadBalancing.enabled,
+                loadBalancing.enabled? loadBalancing.algorithm: null,
                 loadBalancing.algorithm,
                 security.cors,
                 security.ssl,

@@ -143,11 +143,25 @@ userRouter.post("/signin", async (req, res) => {
 });
 
 userRouter.post("/logout", (req, res) => {
+    // res.clearCookie("authToken", {
+    //     httpOnly: true,
+    //     secure: process.env.NODE_ENV === "production",
+    //     sameSite: "strict",
+    //     path: '/',
+    //     expires: 0
+    // })
     res.clearCookie("authToken", {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "strict"
-    })
+        sameSite: process.env.NODE_ENV === "strict",
+        path: '/'
+      });
+    // res.cookie("authToken", "", {
+    //     httpOnly: true, // Prevent client-side JavaScript from accessing the cookie
+    //     secure: process.env.NODE_ENV === "production", // Ensure the cookie is only sent over HTTPS in production
+    //     sameSite: "strict", // Prevent CSRF attacks
+    //     maxAge: 24 * 60 * 60 * 1000, // 24 hours in milliseconds
+    // });
     res.status(200).json({
         message: "Logged out successfully"
     })

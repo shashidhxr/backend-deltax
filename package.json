@@ -22,7 +22,8 @@
     "express": "^4.21.2",
     "jsonwebtoken": "^9.0.2",
     "pg": "^8.13.3",
-    "react-router-dom": "^7.1.5"
+    "react-router-dom": "^7.1.5",
+    "ws": "^8.18.1"
   },
   "devDependencies": {
     "ts-node": "^10.9.2",

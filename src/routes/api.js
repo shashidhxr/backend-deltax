@@ -1,6 +1,7 @@
 import express from "express";
 import jwt from "jsonwebtoken";
 import pool from "../../config/db.js";
+import wss from "../../config/websocket.js";
 
 const apiRouter = express.Router();
 
@@ -157,6 +158,12 @@ apiRouter.post("/", authenticateToken, async (req, res) => {
         }
 
         await client.query('COMMIT');
+
+        wss.clients.forEach(client => {
+            if (client.readyState === client.OPEN) {
+                client.send(JSON.stringify({ type: 'config_update', config: api }));
+            }
+        });
 
         res.status(201).json({
             message: "API created successfully",

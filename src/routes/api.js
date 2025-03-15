@@ -21,7 +21,7 @@ const authenticateToken = (req, res, next) => {
     });
         
     next();
-};
+};  
 
 const initApiTables = async () => {
     try {
@@ -159,12 +159,22 @@ apiRouter.post("/", authenticateToken, async (req, res) => {
 
         await client.query('COMMIT');
 
-        wss.clients.forEach(client => {
-            if (client.readyState === client.OPEN) {
-                client.send(JSON.stringify({ type: 'config_update', config: api }));
+        // wss.clients.forEach(client => {
+        //     if (client.readyState === client.OPEN) {
+        //         client.send(JSON.stringify({ type: 'config_update', config: api }));
+        //     }
+        // });
+
+        wss.clients.forEach((client) => {
+            if (client.readyState === WebSocket.OPEN) {
+                client.send(JSON.stringify({
+                    type: 'config_update',
+                    operation: 'create',
+                    apiId: api.id
+                }));
             }
         });
-
+        
         res.status(201).json({
             message: "API created successfully",
             api
@@ -377,6 +387,16 @@ apiRouter.put("/:id", authenticateToken, async (req, res) => {
 
         await client.query('COMMIT');
 
+        wss.clients.forEach((client) => {
+            if (client.readyState === WebSocket.OPEN) {
+                client.send(JSON.stringify({
+                    type: 'config_update',
+                    operation: 'update',
+                    apiId: req.params.id
+                }));
+            }
+        });
+
         res.json({
             message: "API updated successfully",
             api: apiResult.rows[0]
@@ -387,6 +407,35 @@ apiRouter.put("/:id", authenticateToken, async (req, res) => {
         res.status(500).json({ error: "Internal server error" });
     } finally {
         client.release();
+    }
+});
+
+apiRouter.delete("/:id", authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query(
+            "DELETE FROM apis WHERE id = $1 AND user_id = $2 RETURNING id",
+            [req.params.id, req.user.userId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: "API not found" });
+        }
+
+        // Notify connected clients
+        wss.clients.forEach((client) => {
+            if (client.readyState === WebSocket.OPEN) {
+                client.send(JSON.stringify({
+                    type: 'config_update',
+                    operation: 'delete',
+                    apiId: req.params.id
+                }));
+            }
+        });
+
+        res.json({ message: "API deleted successfully" });
+    } catch (error) {
+        console.error("Error deleting API:", error);
+        res.status(500).json({ error: "Internal server error" });
     }
 });
 

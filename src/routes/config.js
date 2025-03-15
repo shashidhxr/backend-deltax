@@ -1,11 +1,11 @@
 import express from 'express'
-import pool from '../../config/db';
+import pool from '../../config/db.js';
 
 
 const configRouter = express.Router()
 
 // Get all active APIs for gateway configuration
-apiRouter.get("/gateway/config", async (req, res) => {
+configRouter.get("/gateway/config", async (req, res) => {
     try {
         const result = await pool.query(`
             SELECT 

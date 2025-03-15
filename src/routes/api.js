@@ -1,7 +1,7 @@
 import express from "express";
 import jwt from "jsonwebtoken";
 import pool from "../../config/db.js";
-import wss from "../../config/websocket.js";
+import wss from "../index.js"
 
 const apiRouter = express.Router();
 

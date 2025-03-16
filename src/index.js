@@ -5,7 +5,7 @@ import configRouter from "./routes/config.js";
 import cors from "cors"
 import cookieParser from "cookie-parser";
 import http from 'http'
-import initWS from '../config/ws.js'
+import { initWS } from '../config/ws.js'
 
 const app = express()
 

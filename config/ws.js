@@ -1,7 +1,9 @@
 import { WebSocketServer } from 'ws';
 
-export default function initWS(server) {
-    const wss = new WebSocketServer({ server });
+let wss = null
+
+export function initWS(server) {
+    wss = new WebSocketServer({ server });
     
     wss.on('connection', (ws) => {
         console.log('Gateway connected to WebSocket');
@@ -17,5 +19,8 @@ export default function initWS(server) {
             console.log('Gateway disconnected from WebSocket');
         });
     });
-    
+}
+
+export default function getWSS(){
+    return wss
 }

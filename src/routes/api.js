@@ -1,9 +1,12 @@
 import express from "express";
 import jwt from "jsonwebtoken";
 import pool from "../../config/db.js";
-import wss from "../index.js"
+import getWSS from "../../config/ws.js"
+import WebSocket from "ws";
 
 const apiRouter = express.Router();
+
+// import { getWebSocketServer } from '../../config/websocket.js';
 
 const authenticateToken = (req, res, next) => {
     const token = req.cookies.authToken;
@@ -165,6 +168,12 @@ apiRouter.post("/", authenticateToken, async (req, res) => {
         //     }
         // });
 
+
+        const wss = getWSS()
+        if(!wss) {
+            console.error("WSS not found")
+        }
+        
         wss.clients.forEach((client) => {
             if (client.readyState === WebSocket.OPEN) {
                 client.send(JSON.stringify({

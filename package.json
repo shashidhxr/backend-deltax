@@ -4,8 +4,17 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "node src/index.js"
+    "start": "NODE_ENV=production node src/index.js",
+    "build": "npm install --production && npm run build:assets",
+    "build:assets": "webpack --mode production",
+    "test": "NODE_ENV=test jest --coverage",
+    "lint": "eslint .",
+    "security-check": "npm audit && npx snyk test",
+    "docker:build": "docker build -t your-app .",
+    "docker:run": "docker run -p 3000:3000 --env-file .env.production your-app",
+    "pm2:start": "pm2 start ecosystem.config.js --env production",
+    "pm2:logs": "pm2 logs",
+    "pm2:monitor": "pm2 monit"
   },
   "keywords": [],
   "author": "",
@@ -28,6 +37,9 @@
   },
   "devDependencies": {
     "ts-node": "^10.9.2",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "webpack": "^5.98.0",
+    "webpack-cli": "^6.0.1",
+    "webpack-node-externals": "^3.0.0"
   }
 }

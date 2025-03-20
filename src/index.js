@@ -11,10 +11,8 @@ const app = express()
 
 app.use(
     cors({
-        origin: "http://localhost:5173", // Explicitly allow this origin
-        credentials: true, // Allow credentials (cookies)
-        // "Access-Control-Allow-Origin": "http://localhost:5173",
-        // "Access-Control-Allow-Credentials": true
+        origin: `${process.env.FRONTEND_URL}`,
+        credentials: true,
     })
 );
 

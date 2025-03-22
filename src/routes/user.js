@@ -82,7 +82,7 @@ userRouter.post("/signup", async (req, res) => {
             httpOnly: true, // Prevent client-side JavaScript from accessing the cookie
             secure: process.env.NODE_ENV === "production", // Ensure the cookie is only sent over HTTPS in production
             sameSite: "None",
-            domain: 'deltax0.vercel.app',
+            // domain: 'deltax0.vercel.app/',
             maxAge: 24 * 60 * 60 * 1000, // 24 hours in milliseconds
         });
         
@@ -131,7 +131,7 @@ userRouter.post("/signin", async (req, res) => {
             httpOnly: true, // Prevent client-side JavaScript from accessing the cookie
             secure: process.env.NODE_ENV === "production", // Ensure the cookie is only sent over HTTPS in production
             sameSite: "None",
-            domain: 'deltax0.vercel.app',
+            // domain: 'deltax0.vercel.app',
             maxAge: 24 * 60 * 60 * 1000, // 24 hours in milliseconds
         });
         res.json({
@@ -156,7 +156,7 @@ userRouter.post("/logout", (req, res) => {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "None",
-        domain: 'deltax0.vercel.app',
+        // domain: 'deltax0.vercel.app/',
         path: '/'
       });
     // res.cookie("authToken", "", {

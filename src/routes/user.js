@@ -170,4 +170,45 @@ userRouter.post("/logout", (req, res) => {
     })
 })
 
+userRouter.get("/check-auth", async (req, res) => {
+    try {
+        // Get the authToken from cookies
+        const token = req.cookies.authToken;
+
+        // If no token is found, the user is not authenticated
+        if (!token) {
+            return res.status(401).json({ isAuthenticated: false, message: "No token provided" });
+        }
+
+        // Verify the token
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret-key');
+
+        // Fetch user details from the database
+        const userResult = await pool.query(
+            "SELECT id, email, created_at FROM users WHERE id = $1",
+            [decoded.userId]
+        );
+
+        // If user not found, return an error
+        if (userResult.rows.length === 0) {
+            return res.status(404).json({ isAuthenticated: false, message: "User not found" });
+        }
+
+        // Return the authentication state and user details
+        res.status(200).json({
+            isAuthenticated: true,
+            user: userResult.rows[0],
+        });
+    } catch (error) {
+        console.error("Error in check-auth:", error);
+
+        // Handle JWT verification errors (e.g., expired or invalid token)
+        if (error.name === "JsonWebTokenError" || error.name === "TokenExpiredError") {
+            return res.status(401).json({ isAuthenticated: false, message: "Invalid or expired token" });
+        }
+
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+
 export default userRouter;

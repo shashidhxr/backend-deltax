@@ -5,13 +5,11 @@ import getWSS from "../../config/ws.js"
 import WebSocket from "ws";
 
 const apiRouter = express.Router();
-
 // import { getWebSocketServer } from '../../config/websocket.js';
 
 const authenticateToken = (req, res, next) => {
     const token = req.cookies.authToken;
     // console.log(token)
-
     if (!token) {
         return res.status(401).json({ error: "No token provided" });
     }
@@ -34,7 +32,7 @@ const initApiTables = async () => {
                 id SERIAL PRIMARY KEY,
                 user_id INTEGER REFERENCES users(id),
                 name VARCHAR(255) NOT NULL,
-                exposed_url VARCHAR(255) NOT NULL,
+                exposed_path VARCHAR(255) NOT NULL,
                 target_url VARCHAR(255) NOT NULL,
                 method VARCHAR(20) NOT NULL,
                 authentication_type VARCHAR(50),
@@ -84,6 +82,71 @@ const initApiTables = async () => {
 
 initApiTables();
 
+const broadcastConfigUpdate = async (userId) => {
+    try {
+        // Get all APIs for this user
+        const apiResult = await pool.query(
+            `SELECT * FROM apis WHERE user_id = $1`,
+            [userId]
+        );
+        
+        // Get load balancing targets for each API
+        const apis = apiResult.rows;
+        for (const api of apis) {
+            const targetsResult = await pool.query(
+                `SELECT target_url FROM api_load_balancing_targets WHERE api_id = $1`,
+                [api.id]
+            );
+            api.load_balancing_targets = targetsResult.rows.map(row => row.target_url);
+        }
+
+        // Format the routes for the C++ gateway
+        const routes = {};
+        apis.forEach(api => {
+            routes[api.exposed_path] = {
+                target: api.target_url,
+                method: api.method,
+                config: {
+                    rateLimit: api.rate_limit,
+                    auth: api.authentication_type,
+                    loadBalancing: {
+                        enabled: api.load_balancing_enabled,
+                        algorithm: api.load_balancing_algorithm,
+                        targets: api.load_balancing_targets || []
+                    },
+                    security: {
+                        cors: api.security_cors,
+                        ssl: api.security_ssl,
+                        ipWhitelist: api.security_ip_whitelist ? 
+                                     api.security_ip_whitelist.split(',') : []
+                    }
+                }
+            };
+        });
+
+        // Send update to all connected WebSocket clients
+        const wss = getWSS();
+        if (!wss) {
+            console.error("WSS not found");
+            return;
+        }
+        
+        wss.clients.forEach((client) => {
+            if (client.readyState === WebSocket.OPEN) {
+                client.send(JSON.stringify({
+                    userId: userId.toString(), // Ensure userId is a string
+                    routes: routes
+                }));
+            }
+        });
+        
+        console.log(`Sent route updates for user ${userId}(id) with ${Object.keys(routes).length} routes`);
+    } catch (error) {
+        console.error("Error broadcasting config update:", error);
+    }
+};
+
+
 // apiRouter.get("/clear", async (req, res) => {
 //     try {
 //         const result = await pool.query("DROP TABLE IF EXISTS apis CASCADE;");
@@ -106,7 +169,7 @@ apiRouter.post("/", authenticateToken, async (req, res) => {
 
         const {
             name,
-            exposedUrl,
+            exposedPath,
             targetUrl,
             method,
             authType,
@@ -126,7 +189,7 @@ apiRouter.post("/", authenticateToken, async (req, res) => {
         // Insert main API record
         const apiResult = await client.query(
             `INSERT INTO apis 
-            (user_id, name, exposed_url, target_url, method, authentication_type, 
+            (user_id, name, exposed_path, target_url, method, authentication_type, 
              rate_limit, load_balancing_enabled, load_balancing_algorithm,
              security_cors, security_ssl, security_ip_whitelist)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
@@ -134,12 +197,12 @@ apiRouter.post("/", authenticateToken, async (req, res) => {
             [
                 req.user.userId,
                 name,
-                exposedUrl,
+                exposedPath,
                 targetUrl,
                 method,
                 authType,
                 rateLimit,
-                loadBalancing.enabled? loadBalancing.algorithm: null,
+                loadBalancing.enabled,
                 loadBalancing.algorithm,
                 security.cors,
                 security.ssl,
@@ -161,28 +224,9 @@ apiRouter.post("/", authenticateToken, async (req, res) => {
         }
 
         await client.query('COMMIT');
-
-        // wss.clients.forEach(client => {
-        //     if (client.readyState === client.OPEN) {
-        //         client.send(JSON.stringify({ type: 'config_update', config: api }));
-        //     }
-        // });
-
-
-        const wss = getWSS()
-        if(!wss) {
-            console.error("WSS not found")
-        }
         
-        wss.clients.forEach((client) => {
-            if (client.readyState === WebSocket.OPEN) {
-                client.send(JSON.stringify({
-                    type: 'config_update',
-                    operation: 'create',
-                    apiId: api.id
-                }));
-            }
-        });
+        // Broadcast updated configuration to API Gateway
+        await broadcastConfigUpdate(req.user.userId);
         
         res.status(201).json({
             message: "API created successfully",
@@ -332,7 +376,7 @@ apiRouter.put("/:id", authenticateToken, async (req, res) => {
 
         const {
             name,
-            exposedUrl,
+            exposedPath,
             targetUrl,
             method,
             authType,
@@ -345,7 +389,7 @@ apiRouter.put("/:id", authenticateToken, async (req, res) => {
         // Update main API record
         const apiResult = await client.query(
             `UPDATE apis 
-             SET name = $1, exposed_url = $2, target_url = $3, method = $4,
+             SET name = $1, exposed_path = $2, target_url = $3, method = $4,
                  authentication_type = $5, rate_limit = $6, 
                  load_balancing_enabled = $7, load_balancing_algorithm = $8,
                  security_cors = $9, security_ssl = $10, 
@@ -355,7 +399,7 @@ apiRouter.put("/:id", authenticateToken, async (req, res) => {
              RETURNING *`,
             [
                 name,
-                exposedUrl,
+                exposedPath,
                 targetUrl,
                 method,
                 authType,

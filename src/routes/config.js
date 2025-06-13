@@ -14,7 +14,7 @@ configRouter.get("/", async (req, res) => {
                 security_cors, security_ssl, security_ip_whitelist, status
             FROM apis
             WHERE status = 'active'
-            ORDER BY id ASC
+            ORDER BY id ASCk
         `);
 
         // For APIs with load balancing enabled, fetch their targets

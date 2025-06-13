@@ -1,6 +1,6 @@
 import express from "express"
 import bodyParser from "body-parser"
-import cors from "cors"
+// import cors from "cors"
 import bcrypt from "bcrypt"
 import jwt from "jsonwebtoken"
 import pool from "../../config/db.js"
@@ -72,6 +72,7 @@ userRouter.post("/signup", async (req, res) => {
             [email, hashedPassword]
         );
 
+        const user = result.rows[0];        // newly creater user
         const token = jwt.sign(
             { userId: user.id, email: user.email },
             process.env.JWT_SECRET || 'secret-key',
@@ -136,7 +137,8 @@ userRouter.post("/signin", async (req, res) => {
         });
         res.json({
             message: "Logged in successfully",
-            token
+            token,
+            user
         });
     } catch (error) {
         console.error("Error in signin:", error);

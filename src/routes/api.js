@@ -8,20 +8,21 @@ const apiRouter = express.Router();
 // import { getWebSocketServer } from '../../config/websocket.js';
 
 const authenticateToken = (req, res, next) => {
+    // console.log(req.cookies)
     const token = req.cookies.authToken;
     // console.log(token)
     if (!token) {
         return res.status(401).json({ error: "No token provided" });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+    jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
         if (err) {
             return res.status(403).json({ error: "Invalid token" });
         }
         req.user = user;
+    next();
     });
         
-    next();
 };  
 
 const initApiTables = async () => {
